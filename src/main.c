@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <vm.h>
+#include <vmem.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -41,24 +41,24 @@ int tests () {
 
 
 int test_single() {
-    vmInit(MEMORY_SIZE); // 8 * 1 kilobyte (1024 bytes) = 8192 bytes
+    vmemInit(MEMORY_SIZE); // 8 * 1 kilobyte (1024 bytes) = 8192 bytes
     int status = 0;
-    void* seg1 = vmAlloc(4, &status);
-    printf("[test_single][vmAlloc] usage: %ld/%ld\n", vmGetFreeMemory(), MEMORY_SIZE);
-    vmFree(seg1);
-    printf("[test_single][vmFree] usage: %ld/%ld\n", vmGetFreeMemory(), MEMORY_SIZE);
-    vmTerminate();
+    void* seg1 = vmemAlloc(4, &status);
+    printf("[test_single][vmemAlloc] usage: %ld/%ld\n", vmemGetFreeMemory(), MEMORY_SIZE);
+    vmemFree(seg1);
+    printf("[test_single][vmemFree] usage: %ld/%ld\n", vmemGetFreeMemory(), MEMORY_SIZE);
+    vmemTerminate();
     return status;
 }
 
 int test_multi() {
-    vmInit(MEMORY_SIZE); // 8 * 1 kilobyte (1024 bytes) = 8192 bytes
+    vmemInit(MEMORY_SIZE); // 8 * 1 kilobyte (1024 bytes) = 8192 bytes
     for (int x = 0; x < TEST_MULTI_OBJECTS; x++) {
         int status = 0;
         #ifdef TEST_DEBUG
         printf("%d:\t", x);
         #endif
-        vmAlloc(8, &status);
+        vmemAlloc(8, &status);
         if (status != 0) {
             #ifdef TEST_DEBUG
             printf("E%d", status);
@@ -90,32 +90,32 @@ int test_multi() {
     #ifdef TEST_DEBUG
     printf("\n");
     #endif
-    vmTerminate();
+    vmemTerminate();
     return 0;
 }
 
 int test_free() {
-    vmInit(MEMORY_SIZE); // 8 * 1 kilobyte (1024 bytes) = 8192 bytes
-    void* o0 = vmAlloc(4, NULL);
-    vmShowRegions("o0 alloc");
-    void* o1 = vmAlloc(4, NULL);
-    vmShowRegions("o1 alloc");
-    printf("[test_free][o0 o1 alloc] \e[7musage\e[0m: %ld/%ld\n", vmGetFreeMemory(), MEMORY_SIZE);
+    vmemInit(MEMORY_SIZE); // 8 * 1 kilobyte (1024 bytes) = 8192 bytes
+    void* o0 = vmemAlloc(4, NULL);
+    vmemShowRegions("o0 alloc");
+    void* o1 = vmemAlloc(4, NULL);
+    vmemShowRegions("o1 alloc");
+    printf("[test_free][o0 o1 alloc] \e[7musage\e[0m: %ld/%ld\n", vmemGetFreeMemory(), MEMORY_SIZE);
     uintptr_t absposition0 = (uintptr_t) o0;
     uintptr_t absposition1 = (uintptr_t) o1;
-    vmShowRegions("status");
-    vmFree(o0);
-    printf("[test_single][vmFree(o0)] \e[7musage\e[0m: %ld/%ld\n", vmGetFreeMemory(), MEMORY_SIZE);
-    vmShowRegions("o0 free");
-    void* o2 = vmAlloc(1, NULL);
-    void* o3 = vmAlloc(1, NULL);
+    vmemShowRegions("status");
+    vmemFree(o0);
+    printf("[test_single][vmemFree(o0)] \e[7musage\e[0m: %ld/%ld\n", vmemGetFreeMemory(), MEMORY_SIZE);
+    vmemShowRegions("o0 free");
+    void* o2 = vmemAlloc(1, NULL);
+    void* o3 = vmemAlloc(1, NULL);
     uintptr_t absposition2 = (uintptr_t) o2;
     uintptr_t absposition3 = (uintptr_t) o3;
-    vmShowRegions("o2 o3 alloc");
-    printf("[test_single][vmAlloc o2, o3] \e[7musage\e[0m: %ld/%ld\n", vmGetFreeMemory(), MEMORY_SIZE);
-    void* o4 = vmAlloc(3, NULL);
-    vmShowRegions("o4 alloc");
-    printf("[test_single][vmAlloc o4] \e[7musage\e[0m: %ld/%ld\n", vmGetFreeMemory(), MEMORY_SIZE);
-    vmTerminate();
+    vmemShowRegions("o2 o3 alloc");
+    printf("[test_single][vmemAlloc o2, o3] \e[7musage\e[0m: %ld/%ld\n", vmemGetFreeMemory(), MEMORY_SIZE);
+    void* o4 = vmemAlloc(3, NULL);
+    vmemShowRegions("o4 alloc");
+    printf("[test_single][vmemAlloc o4] \e[7musage\e[0m: %ld/%ld\n", vmemGetFreeMemory(), MEMORY_SIZE);
+    vmemTerminate();
     return 0;
 }

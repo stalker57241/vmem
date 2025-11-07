@@ -1,19 +1,19 @@
 /*  @author: stalker320
     @date: 2.11.2025 (DD.MM.YYYY)
  */
-#include <vm.h>
+#include <vmem.h>
 #include <stdlib.h>
 #include <errors.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 
-static struct VMData {
+static struct vmemData {
     char* baseAddress;
     size_t capacity;
     void* null;
     struct Region* regionStack;
-}* vmData = NULL;
+}* vmemData = NULL;
 // Utility
 struct Region {
     struct {
@@ -25,25 +25,25 @@ struct Region {
 /// @brief 
 /// @param size always incremented by 1, for null-pointer offset
 /// @return 
-int vmInit(size_t size) {
-    vmData = malloc(sizeof(struct VMData));
-    if (vmData == NULL) return ERR_ALLOCATE;
+int vmemInit(size_t size) {
+    vmemData = malloc(sizeof(struct vmemData));
+    if (vmemData == NULL) return ERR_ALLOCATE;
     if (size < 0)       return ERR_ALLOCATE;
     size_t real_size = size + 1;
-    vmData->baseAddress = malloc(real_size);
-    vmData->capacity = real_size;
-    vmData->regionStack = malloc(sizeof(struct Region));
-    vmData->regionStack->used = false;
-    vmData->regionStack->capacity = real_size;
-    vmData->regionStack->next = NULL;
+    vmemData->baseAddress = malloc(real_size);
+    vmemData->capacity = real_size;
+    vmemData->regionStack = malloc(sizeof(struct Region));
+    vmemData->regionStack->used = false;
+    vmemData->regionStack->capacity = real_size;
+    vmemData->regionStack->next = NULL;
     int status = 0;
-    vmData->null = vmAlloc(1, &status);
+    vmemData->null = vmemAlloc(1, &status);
     printf("Null creation status: %s\n", status == 0 ? "OK" : "FAILED");
-    vmShowRegions(NULL);
+    vmemShowRegions(NULL);
     return OK;
 }
 // Utility
-int vmMarkRegion(size_t size, struct Region* region) {
+int vmemMarkRegion(size_t size, struct Region* region) {
     size_t base_size = region->capacity;
     if (size > base_size) return ERR_ALLOCATE;
     if (region->used == true) return ERR_ALLOCATE;
@@ -60,25 +60,25 @@ int vmMarkRegion(size_t size, struct Region* region) {
     return OK;
 }
 // Utility
-void vmRegionTakeNext(struct Region** pregion, size_t* poffset) {
+void vmemRegionTakeNext(struct Region** pregion, size_t* poffset) {
     if (poffset != NULL) {
         *poffset += (*pregion)->capacity;
     }
     *pregion = (*pregion)->next;
 }
 // Utility
-struct Region* vmFindUnmarkedRegion(size_t size, size_t* poffset) {
+struct Region* vmemFindUnmarkedRegion(size_t size, size_t* poffset) {
     // Required region:
     // used = false
     // capacity < size
-    struct Region* region = vmData->regionStack;
+    struct Region* region = vmemData->regionStack;
     *poffset = 0;
     while (region != NULL) {
         if (region->used) {
-            vmRegionTakeNext(&region, poffset);
+            vmemRegionTakeNext(&region, poffset);
         }
         else if (region->capacity < size) { // used = false
-            vmRegionTakeNext(&region, poffset);
+            vmemRegionTakeNext(&region, poffset);
         } // used = false, capacity < size
         else {
             return region;
@@ -86,7 +86,7 @@ struct Region* vmFindUnmarkedRegion(size_t size, size_t* poffset) {
     }
     return NULL;
 }
-void vmMergeRegion(struct Region* region) {
+void vmemMergeRegion(struct Region* region) {
     if (region == NULL) return;
     if (region->next->used != false) return;
     struct Region* newNext = region->next->next;
@@ -95,35 +95,35 @@ void vmMergeRegion(struct Region* region) {
     free(region->next);
     region->next = newNext;
 }
-MemoryAddress vmAlloc(size_t size, int* status) {
-    if (size > vmData->capacity) { if (status) *status = ERR_ALLOCATE; return NULL; }
+MemoryAddress vmemAlloc(size_t size, int* status) {
+    if (size > vmemData->capacity) { if (status) *status = ERR_ALLOCATE; return NULL; }
     size_t offset = 0;
-    struct Region* region = vmFindUnmarkedRegion(size, &offset);
+    struct Region* region = vmemFindUnmarkedRegion(size, &offset);
     if (region == NULL) { if (status) *status = ERR_ALLOCATE; return NULL; }
-    if (vmMarkRegion(size, region) != OK) {if (status) *status = ERR_ALLOCATE; return NULL; }
+    if (vmemMarkRegion(size, region) != OK) {if (status) *status = ERR_ALLOCATE; return NULL; }
     if (status) *status = OK;
     
-    uintptr_t address = (uintptr_t) vmData->baseAddress + (uintptr_t) offset;
+    uintptr_t address = (uintptr_t) vmemData->baseAddress + (uintptr_t) offset;
     return (MemoryAddress) address;
 }
 
-void vmFree(MemoryAddress address) {
+void vmemFree(MemoryAddress address) {
     if (address == NULL) return;
-    struct Region* region = vmData->regionStack;
+    struct Region* region = vmemData->regionStack;
     size_t offset = 0;
-    while (offset < (uintptr_t) address - (uintptr_t) vmData->baseAddress) {
-        vmRegionTakeNext(&region, &offset);
+    while (offset < (uintptr_t) address - (uintptr_t) vmemData->baseAddress) {
+        vmemRegionTakeNext(&region, &offset);
         if (region == NULL) return;
     }
     region->used = false;
     if (region->next->used == false) {
-        vmMergeRegion(region);
+        vmemMergeRegion(region);
     }
 }
-void vmShowRegions(char* prefix) {
+void vmemShowRegions(char* prefix) {
     if (prefix != NULL)
         printf("%s\n", prefix);
-    struct Region* region = vmData->regionStack;
+    struct Region* region = vmemData->regionStack;
     size_t offset = 0;
     printf("[%ld..%ld] used: %s\tcapacity: %ld\n", 
         offset, offset + region->capacity,
@@ -139,24 +139,23 @@ void vmShowRegions(char* prefix) {
     }
     printf("\n");
 }
-void vmTerminate() {
-    struct Region* region = vmData->regionStack;
+void vmemTerminate() {
+    struct Region* region = vmemData->regionStack;
     while (region) {
         struct Region* temp = region;
         region = region->next;
         free(temp);
     }
-    free(vmData->baseAddress);
-    free(vmData);
+    free(vmemData->baseAddress);
+    free(vmemData);
 }
 
-size_t vmGetFreeMemory() {
-    struct Region* region = vmData->regionStack;
+size_t vmemGetFreeMemory() {
+    struct Region* region = vmemData->regionStack;
     size_t capacity = 0;
     while ((region = region->next) != NULL) {
         if (!region->used)
             capacity += region->capacity;
     }
-    printf("%ld\n");
     return capacity;
 }

@@ -71,6 +71,7 @@ struct Region* vmemFindUnmarkedRegion(size_t size, size_t* poffset) {
     // Required region:
     // used = false
     // capacity < size
+    if (vmemData == NULL) return ERR_INIT;
     struct Region* region = vmemData->regionStack;
     *poffset = 0;
     while (region != NULL) {
@@ -96,6 +97,7 @@ void vmemMergeRegion(struct Region* region) {
     region->next = newNext;
 }
 MemoryAddress vmemAlloc(size_t size, int* status) {
+    if (vmemData == NULL) return ERR_INIT;
     if (size > vmemData->capacity) { if (status) *status = ERR_ALLOCATE; return NULL; }
     size_t offset = 0;
     struct Region* region = vmemFindUnmarkedRegion(size, &offset);
@@ -107,20 +109,23 @@ MemoryAddress vmemAlloc(size_t size, int* status) {
     return (MemoryAddress) address;
 }
 
-void vmemFree(MemoryAddress address) {
-    if (address == NULL) return;
+int vmemFree(MemoryAddress address) {
+    if (vmemData == NULL) return ERR_INIT;
+    if (address == NULL) return ERR_OPEN;
     struct Region* region = vmemData->regionStack;
     size_t offset = 0;
     while (offset < (uintptr_t) address - (uintptr_t) vmemData->baseAddress) {
         vmemRegionTakeNext(&region, &offset);
-        if (region == NULL) return;
+        if (region == NULL) return ERR_OPEN;
     }
     region->used = false;
     if (region->next->used == false) {
         vmemMergeRegion(region);
     }
+    return 0;
 }
-void vmemShowRegions(char* prefix) {
+int vmemShowRegions(char* prefix) {
+    if (vmemData == NULL) return ERR_INIT;
     if (prefix != NULL)
         printf("%s\n", prefix);
     struct Region* region = vmemData->regionStack;
@@ -138,6 +143,7 @@ void vmemShowRegions(char* prefix) {
         offset += region->capacity;
     }
     printf("\n");
+    return OK;
 }
 void vmemTerminate() {
     struct Region* region = vmemData->regionStack;
@@ -151,6 +157,7 @@ void vmemTerminate() {
 }
 
 size_t vmemGetFreeMemory() {
+    if (vmemData == NULL) return 0;
     struct Region* region = vmemData->regionStack;
     size_t capacity = 0;
     while ((region = region->next) != NULL) {

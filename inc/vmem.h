@@ -16,7 +16,7 @@ typedef void *MemoryAddress;
 int vmemInit(size_t size);
 void vmemTerminate();
 MemoryAddress vmemAlloc(size_t size, int* status);
-void vmemFree(MemoryAddress address);
-void vmemShowRegions(char* prefix);
+int vmemFree(MemoryAddress address);
+int vmemShowRegions(char* prefix);
 size_t vmemGetFreeMemory();
 #endif

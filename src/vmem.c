@@ -71,7 +71,7 @@ struct Region* vmemFindUnmarkedRegion(size_t size, size_t* poffset) {
     // Required region:
     // used = false
     // capacity < size
-    if (vmemData == NULL) return ERR_INIT;
+    if (vmemData == NULL) return NULL;
     struct Region* region = vmemData->regionStack;
     *poffset = 0;
     while (region != NULL) {
@@ -97,7 +97,10 @@ void vmemMergeRegion(struct Region* region) {
     region->next = newNext;
 }
 MemoryAddress vmemAlloc(size_t size, int* status) {
-    if (vmemData == NULL) return ERR_INIT;
+    if (vmemData == NULL) {
+        *status = ERR_INIT;
+        return NULL;
+    }
     if (size > vmemData->capacity) { if (status) *status = ERR_ALLOCATE; return NULL; }
     size_t offset = 0;
     struct Region* region = vmemFindUnmarkedRegion(size, &offset);

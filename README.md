@@ -19,3 +19,15 @@ $ build/test
 ```cmd
 build/test.exe
 ```
+# Usage
+```C
+#include <vmem.h>
+
+int main() {
+  vmemInit(KILO(8);
+  void* mem = vmemAlloc(8, NULL);
+  vmemFree(mem);
+  vmemTerminate();
+  return 0;
+}
+```
